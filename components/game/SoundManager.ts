@@ -11,6 +11,13 @@ export class SoundManager {
     
     private currentScoreBaseMidiNote: number = SC.INITIAL_SCORE_MIDI_NOTE;
 
+    // Next available play times for each synth to prevent scheduling conflicts
+    private nextFlapSoundTime: number = 0;
+    private nextImpactSoundTime: number = 0;
+    private nextScoreSoundTime: number = 0;
+    private nextCollectSoundTime: number = 0;
+    private readonly schedulingBuffer: number = 0.005; // 5ms buffer
+
     constructor() {
         // Constructor can be empty if no scene-specific setup is needed for Tone.js
     }
@@ -49,6 +56,13 @@ export class SoundManager {
             Q: 1
         }).toDestination();
         this.collectSoundSynth.connect(this.collectSoundFilter);
+
+        // Initialize next available times
+        const now = Tone.now();
+        this.nextFlapSoundTime = now;
+        this.nextImpactSoundTime = now;
+        this.nextScoreSoundTime = now;
+        this.nextCollectSoundTime = now;
     }
 
     async ensureAudioContextStarted(): Promise<void> {
@@ -63,26 +77,43 @@ export class SoundManager {
             const randomDepth = 40 + Math.random() * 60; 
             this.jumpSoundLFO.min = -randomDepth / 2;
             this.jumpSoundLFO.max = randomDepth / 2;
-            this.jumpSoundSynth.triggerAttackRelease("G3", "16n", Tone.now() + 0.001); 
+            
+            const durationString = "16n";
+            const durationSeconds = Tone.Time(durationString).toSeconds();
+            const now = Tone.now();
+            const scheduledPlayTime = Math.max(now, this.nextFlapSoundTime);
+
+            this.jumpSoundSynth.triggerAttackRelease("G3", durationString, scheduledPlayTime); 
+            this.nextFlapSoundTime = scheduledPlayTime + durationSeconds + this.schedulingBuffer;
         }
     }
 
     playImpactSound(): void {
         if (this.impactSoundSynth && Tone.context.state === 'running') {
-            this.impactSoundSynth.triggerAttackRelease("8n", Tone.now());
+            const durationString = "8n";
+            const durationSeconds = Tone.Time(durationString).toSeconds();
+            const now = Tone.now();
+            const scheduledPlayTime = Math.max(now, this.nextImpactSoundTime);
+
+            this.impactSoundSynth.triggerAttackRelease(durationString, scheduledPlayTime);
+            this.nextImpactSoundTime = scheduledPlayTime + durationSeconds + this.schedulingBuffer;
         }
     }
 
     playScoreSound(): void { // This is for passing pipes
         if (!this.scoreSoundSynth || Tone.context.state !== 'running') return;
 
+        const soundDurationSeconds = SC.SCORE_SOUND_DURATION;
         const now = Tone.now();
+        const scheduledPlayTime = Math.max(now, this.nextScoreSoundTime);
+        
         const startFreq = Tone.Frequency(this.currentScoreBaseMidiNote, "midi").toFrequency();
         const endFreq = Tone.Frequency(this.currentScoreBaseMidiNote + SC.SCORE_SOUND_PITCH_RISE_SEMITONES, "midi").toFrequency();
 
-        this.scoreSoundSynth.triggerAttack(startFreq, now);
-        this.scoreSoundSynth.frequency.linearRampTo(endFreq, now + SC.SCORE_SOUND_DURATION * 0.7); 
-        this.scoreSoundSynth.triggerRelease(now + SC.SCORE_SOUND_DURATION);
+        this.scoreSoundSynth.triggerAttack(startFreq, scheduledPlayTime);
+        this.scoreSoundSynth.frequency.linearRampTo(endFreq, scheduledPlayTime + soundDurationSeconds * 0.7); 
+        this.scoreSoundSynth.triggerRelease(scheduledPlayTime + soundDurationSeconds);
+        this.nextScoreSoundTime = scheduledPlayTime + soundDurationSeconds + this.schedulingBuffer;
 
         this.currentScoreBaseMidiNote++;
         if (this.currentScoreBaseMidiNote > SC.SCORE_MIDI_NOTE_MAX) {
@@ -100,9 +131,13 @@ export class SoundManager {
         this.collectSoundFilter.frequency.value = 800 + (Math.random() * 400); // Randomize between 800 Hz and 1200 Hz
 
         const note = itemDefinition.soundNote;
-        const duration = itemKey === 'DIAMOND' ? SC.COLLECT_SOUND_DURATION_DIAMOND : SC.COLLECT_SOUND_DURATION_COIN;
+        const durationString = itemKey === 'DIAMOND' ? SC.COLLECT_SOUND_DURATION_DIAMOND : SC.COLLECT_SOUND_DURATION_COIN;
+        const durationSeconds = Tone.Time(durationString).toSeconds();
+        const now = Tone.now();
+        const scheduledPlayTime = Math.max(now, this.nextCollectSoundTime);
         
-        this.collectSoundSynth.triggerAttackRelease(note, duration, Tone.now() + 0.001);
+        this.collectSoundSynth.triggerAttackRelease(note, durationString, scheduledPlayTime);
+        this.nextCollectSoundTime = scheduledPlayTime + durationSeconds + this.schedulingBuffer;
     }
 
     dispose(): void {
