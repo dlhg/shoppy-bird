@@ -16,6 +16,9 @@ class GameScene extends Phaser.Scene {
     public tweens!: Phaser.Tweens.TweenManager;
 
 
+    private currentGapMinHeight!: number;
+    private currentGapMaxHeight!: number;
+
     private bird!: Phaser.GameObjects.Sprite & { body: Phaser.Physics.Arcade.Body };
     private pipes!: Phaser.Physics.Arcade.Group;
     private scoreZones!: Phaser.Physics.Arcade.Group;
@@ -122,6 +125,10 @@ class GameScene extends Phaser.Scene {
         this.itemTweens.clear();
         this.totalItemRarityWeight = ITEM_CONSTANTS.TYPES.reduce((sum, type) => sum + type.rarityWeight, 0);
         
+        // Initialize pipe gap sizes
+        this.currentGapMinHeight = PIPE_CONSTANTS.INITIAL_PIPE_GAP_MIN_HEIGHT;
+        this.currentGapMaxHeight = PIPE_CONSTANTS.INITIAL_PIPE_GAP_MAX_HEIGHT;
+
         this.pipesPassedSinceLastBonus = 0;
         this.pipesNeededForNextBonus = BONUS_CONSTANTS.INITIAL_PIPES_FOR_BONUS; // Reset to initial value
         this.isBonusPhaseActive = false;
@@ -269,6 +276,9 @@ class GameScene extends Phaser.Scene {
         } else {
             const lastGameOverTime = this.data.get('gameOverTime') || 0;
             if (this.time.now - lastGameOverTime > 500) { 
+                 // Reset pipe gap sizes when restarting the game
+                 this.currentGapMinHeight = PIPE_CONSTANTS.INITIAL_PIPE_GAP_MIN_HEIGHT;
+                 this.currentGapMaxHeight = PIPE_CONSTANTS.INITIAL_PIPE_GAP_MAX_HEIGHT;
                  this.scene.restart();
             }
         }
@@ -294,7 +304,7 @@ class GameScene extends Phaser.Scene {
     addPipePair(): void {
         if (this.isGameOver || !this.hasStarted || this.isPaused || this.isBonusPhaseActive) return;
 
-        const gapHeight = Phaser.Math.Between(PIPE_CONSTANTS.PIPE_GAP_MIN_HEIGHT, PIPE_CONSTANTS.PIPE_GAP_MAX_HEIGHT);
+        const gapHeight = Phaser.Math.Between(this.currentGapMinHeight, this.currentGapMaxHeight);
         const minGapCenterY = (gapHeight / 2) + 50; 
         const maxGapCenterY = GAME_CONSTANTS.GAME_HEIGHT - (gapHeight / 2) - 50; 
         const gapPositionY = Phaser.Math.Between(minGapCenterY, maxGapCenterY);
@@ -346,6 +356,19 @@ class GameScene extends Phaser.Scene {
                 loop: false 
             });
         }
+
+        // Decrease gap size for next pipes, ensuring it doesn't go below target minimums
+        const decreaseAmountMin = this.currentGapMinHeight * PIPE_CONSTANTS.PIPE_GAP_DECREASE_FACTOR;
+        this.currentGapMinHeight = Math.max(
+            PIPE_CONSTANTS.TARGET_PIPE_GAP_MIN_HEIGHT, 
+            this.currentGapMinHeight - decreaseAmountMin
+        );
+
+        const decreaseAmountMax = this.currentGapMaxHeight * PIPE_CONSTANTS.PIPE_GAP_DECREASE_FACTOR;
+        this.currentGapMaxHeight = Math.max(
+            PIPE_CONSTANTS.TARGET_PIPE_GAP_MAX_HEIGHT, 
+            this.currentGapMaxHeight - decreaseAmountMax
+        );
     }
 
     passPipeGap(_bird: Phaser.Types.Physics.Arcade.GameObjectWithBody, zone: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {

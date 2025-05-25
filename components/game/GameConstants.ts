@@ -1,4 +1,3 @@
-
 // Fix: Import Phaser for Phaser.Display.Color
 import Phaser from 'phaser';
 
@@ -23,8 +22,11 @@ export const PIPE_CONSTANTS = {
     PIPE_SPAWN_INTERVAL_MIN: 1400, 
     PIPE_SPAWN_INTERVAL_MAX: 2000, 
     PIPE_SPEED: -160, 
-    PIPE_GAP_MIN_HEIGHT: 150, 
-    PIPE_GAP_MAX_HEIGHT: 200, 
+    TARGET_PIPE_GAP_MIN_HEIGHT: 150, 
+    TARGET_PIPE_GAP_MAX_HEIGHT: 200, 
+    INITIAL_PIPE_GAP_MIN_HEIGHT: 225,
+    INITIAL_PIPE_GAP_MAX_HEIGHT: 300,
+    PIPE_GAP_DECREASE_FACTOR: 0.001,
 };
 
 export const BACKGROUND_CONSTANTS = {
