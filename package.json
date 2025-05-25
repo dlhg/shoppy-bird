@@ -1,0 +1,22 @@
+{
+  "name": "shoppy-bird",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react-dom": "^19.1.0",
+    "react": "^19.1.0",
+    "phaser": "^3.90.0",
+    "tone": "^15.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.2.0"
+  }
+}

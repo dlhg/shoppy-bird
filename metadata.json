@@ -1,0 +1,6 @@
+{
+  "name": "Shoppy Bird",
+  "description": "A simple Floppy Bird clone built with React and Phaser.js, styled with Tailwind CSS. Click or tap to make the bird flap and navigate through pipes.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
