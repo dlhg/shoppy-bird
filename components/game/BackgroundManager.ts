@@ -23,6 +23,11 @@ export class BackgroundManager {
     // Shooting Star Timer
     private nextShootingStarTime: number = 0;
 
+    // Banner Plane State
+    private planesToSpawnThisSegment: number = 0;
+    private planesSpawnedThisSegment: number = 0;
+    private nextPlaneSpawnTime: number = Number.MAX_SAFE_INTEGER;
+
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
     }
@@ -56,6 +61,9 @@ export class BackgroundManager {
         shootingStarHeadGraphics.fillCircle(3, 3, 3); // 6x6 texture, 3px radius circle
         shootingStarHeadGraphics.generateTexture('shootingStarHeadTexture', 6, 6);
         shootingStarHeadGraphics.destroy();
+
+        // Load Banner Plane
+        this.scene.load.image('bannerPlaneTexture', 'assets/banner_plane.png');
 
         const cloudGraphics1 = make.graphics();
         cloudGraphics1.fillStyle(0xffffff, 0.9);
@@ -136,6 +144,7 @@ export class BackgroundManager {
         const { add } = this.scene;
         this.cycleTime = BG_CONST.DAY_DURATION; // Start at the beginning of the night cycle
         this.nextShootingStarTime = 0; // Initialize shooting star timer
+        this.resetPlaneSpawningState(); // Initialize plane spawning for the first segment
 
         this.skyRectangle = add.rectangle(0, 0, GAME_CONSTANTS.GAME_WIDTH, GAME_CONSTANTS.GAME_HEIGHT, BG_CONST.DAY_COLOR.color)
             .setOrigin(0, 0)
@@ -279,7 +288,15 @@ export class BackgroundManager {
     }
 
     private updateDayNightCycle(delta: number, gameTime: number): void {
+        const previousCycleTime = this.cycleTime;
         this.cycleTime = (this.cycleTime + delta) % BG_CONST.TOTAL_CYCLE_DURATION;
+
+        // Detect segment change to reset plane spawning
+        const previouslyDay = previousCycleTime < BG_CONST.DAY_DURATION;
+        const currentlyDay = this.cycleTime < BG_CONST.DAY_DURATION;
+        if (previouslyDay !== currentlyDay) {
+            this.resetPlaneSpawningState();
+        }
         
         let skyColor;
         const sunPathYBase = GAME_CONSTANTS.GAME_HEIGHT * 0.65;
@@ -310,7 +327,7 @@ export class BackgroundManager {
             // Spawn shooting stars during night
             if (gameTime > this.nextShootingStarTime) {
                 this.spawnShootingStar();
-                this.nextShootingStarTime = gameTime + Phaser.Math.Between(10000, 20000); // Next one in 10-20 seconds
+                this.nextShootingStarTime = gameTime + Phaser.Math.Between(10000, 20000); 
             }
 
             const thirdOfNight = 1/3;
@@ -341,7 +358,93 @@ export class BackgroundManager {
                 return true;
             });
         }
+
+        // Banner Plane Spawning Logic (runs every update, irrespective of day/night specific color changes)
+        if (this.planesSpawnedThisSegment < this.planesToSpawnThisSegment && gameTime > this.nextPlaneSpawnTime) {
+            this.spawnBannerPlane();
+            this.planesSpawnedThisSegment++;
+            if (this.planesSpawnedThisSegment < this.planesToSpawnThisSegment) {
+                const currentSegmentDuration = (this.cycleTime < BG_CONST.DAY_DURATION) ? BG_CONST.DAY_DURATION : BG_CONST.NIGHT_DURATION;
+                const timePassedInCurrentSegment = this.cycleTime % currentSegmentDuration;
+                const remainingTimeInSegment = currentSegmentDuration - timePassedInCurrentSegment;
+                
+                if (remainingTimeInSegment > 0) { // Ensure there's time left to spawn
+                    // Schedule next plane in the latter half of the remaining time, to space them out
+                    const earliestSpawnDelay = remainingTimeInSegment * 0.3;
+                    const latestSpawnDelay = remainingTimeInSegment * 0.7;
+                    this.nextPlaneSpawnTime = gameTime + Phaser.Math.Between(earliestSpawnDelay, latestSpawnDelay);
+                } else {
+                    this.nextPlaneSpawnTime = Number.MAX_SAFE_INTEGER; // No time left
+                }
+            } else {
+                this.nextPlaneSpawnTime = Number.MAX_SAFE_INTEGER; // All planes for this segment spawned
+            }
+        }
+
         this.skyRectangle.fillColor = skyColor.color;
+    }
+
+    private resetPlaneSpawningState(): void {
+        this.planesToSpawnThisSegment = Phaser.Math.RND.pick([1, 2]);
+        this.planesSpawnedThisSegment = 0;
+        
+        const currentSegmentDuration = (this.cycleTime < BG_CONST.DAY_DURATION) ? BG_CONST.DAY_DURATION : BG_CONST.NIGHT_DURATION;
+        const timePassedInCurrentSegment = this.cycleTime % currentSegmentDuration;
+        const remainingTimeInSegment = currentSegmentDuration - timePassedInCurrentSegment;
+
+        if (remainingTimeInSegment > 0) {
+            // Schedule the first plane in the first half of the remaining segment time
+            const earliestSpawnDelay = remainingTimeInSegment * 0.1;
+            const latestSpawnDelay = remainingTimeInSegment * 0.5;
+            this.nextPlaneSpawnTime = this.scene.time.now + Phaser.Math.Between(earliestSpawnDelay, latestSpawnDelay);
+        } else {
+             this.nextPlaneSpawnTime = Number.MAX_SAFE_INTEGER; // No time left in current segment to schedule
+        }
+    }
+
+    private spawnBannerPlane(): void {
+        const planeTextureKey = 'bannerPlaneTexture';
+        const planeSprite = this.scene.add.sprite(0, 0, planeTextureKey); // Temporary to get width
+        const originalWidth = planeSprite.width;
+        planeSprite.destroy(); // Don't need it anymore
+
+        const planeScale = Phaser.Math.FloatBetween(0.35, 0.55);
+        const effectiveWidth = originalWidth * planeScale;
+
+        const startX = GAME_CONSTANTS.GAME_WIDTH + effectiveWidth / 2; 
+        const endX = -effectiveWidth / 2;
+
+        const altitudeMin = GAME_CONSTANTS.GAME_HEIGHT * 0.15;
+        const altitudeMax = GAME_CONSTANTS.GAME_HEIGHT * 0.45;
+        const startY = Phaser.Math.Between(altitudeMin, altitudeMax);
+        
+        const waveAmplitude = Phaser.Math.Between(20, 50);
+        // Frequency: higher value means more waves over the same distance.
+        // Let's tie it to the screen width to get a consistent number of waves regardless of plane speed.
+        const totalDistance = GAME_CONSTANTS.GAME_WIDTH + effectiveWidth; // Approximate travel distance on screen
+        const numberOfWaves = Phaser.Math.FloatBetween(1.5, 2.5); // 1.5 to 2.5 full sine waves across the screen
+        const waveFrequencyFactor = (Math.PI * 2 * numberOfWaves) / totalDistance; 
+
+        const plane = this.scene.add.sprite(startX, startY, planeTextureKey)
+            .setScale(planeScale)
+            .setDepth(-5); 
+
+        const duration = Phaser.Math.Between(10000, 16000); // 10-16 seconds to cross screen
+
+        this.scene.tweens.add({
+            targets: plane,
+            x: endX,
+            duration: duration,
+            ease: 'Linear',
+            onUpdate: () => { // Removed tweenInstance param as it's not used
+                // Calculate horizontal distance covered from start for sine wave progression
+                const distanceCovered = startX - plane.x;
+                plane.y = startY + waveAmplitude * Math.sin(waveFrequencyFactor * distanceCovered);
+            },
+            onComplete: () => {
+                plane.destroy();
+            }
+        });
     }
 
     private spawnShootingStar(): void {
