@@ -443,10 +443,7 @@ class GameScene extends Phaser.Scene {
             loop: true
         });
         
-        await Promise.all([
-            this.uiManager.showLuckyBreakMessage(),
-            this.backgroundManager.createAndShowRainbow()
-        ]);
+        await this.backgroundManager.createAndShowRainbow();
 
         this.bonusPhaseTimer = this.time.addEvent({
             delay: BONUS_CONSTANTS.BONUS_PHASE_DURATION,
@@ -494,10 +491,7 @@ class GameScene extends Phaser.Scene {
         
         this.uiManager.hideBonusCountdown();
 
-        await Promise.all([
-            this.uiManager.hideLuckyBreakMessage(),
-            this.backgroundManager.fadeOutAndDestroyRainbow()
-        ]);
+        await this.backgroundManager.fadeOutAndDestroyRainbow();
 
         this.bonusItemsGroup.clear(true, true);
 
@@ -521,7 +515,6 @@ class GameScene extends Phaser.Scene {
         this.bonusItemSpawnTimer = undefined;
         
         this.uiManager.hideBonusCountdown();
-        this.uiManager.hideLuckyBreakMessage(); 
         this.backgroundManager.cleanupBonusVisuals(); 
         this.bonusItemsGroup.clear(true, true);
 

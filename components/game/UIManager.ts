@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { UI_CONSTANTS as UIC, GAME_CONSTANTS as GC, BONUS_CONSTANTS } from './GameConstants';
 
@@ -80,14 +79,6 @@ export class UIManager {
         // Removed: this.updatePipesUntilBonus(0, BONUS_CONSTANTS.PIPES_FOR_BONUS);
 
 
-        this.luckyBreakMessageText = this.scene.add.text(
-            centerX, 
-            this.gameHeight / 2 - 50, // Prominent position
-            'LUCKY BREAK!', 
-            { fontSize: '38px', color: UIC.LUCKY_BREAK_TEXT_COLOR, fontFamily: UIC.PRIMARY_FONT, stroke: UIC.TEXT_COLOR_DARK, strokeThickness: 6, align: 'center' }
-        ).setOrigin(0.5).setDepth(202).setVisible(false).setAlpha(0);
-
-
         this.bonusCountdownText = this.scene.add.text(
             centerX,
             this.scoreText.y + this.scoreText.height / 2 + 25, // Below score text
@@ -105,7 +96,6 @@ export class UIManager {
         this.pauseContainer.setVisible(false);
         this.pipesUntilBonusText.setVisible(true);
         this.updatePipesUntilBonus(initialPipesPassed, initialPipesNeeded); // Use provided values
-        this.luckyBreakMessageText.setVisible(false).setAlpha(0);
         this.bonusCountdownText.setVisible(false);
     }
 
@@ -158,7 +148,6 @@ export class UIManager {
         });
         this.pauseContainer.setVisible(false); 
         this.pipesUntilBonusText.setVisible(false); // Hide on game over
-        this.luckyBreakMessageText.setVisible(false).setAlpha(0);
         this.bonusCountdownText.setVisible(false);
     }
 
@@ -179,39 +168,10 @@ export class UIManager {
 
     showBonusActiveStatus(): void {
          if (this.pipesUntilBonusText.active) {
-            this.pipesUntilBonusText.setText('LUCKY BREAK ACTIVE!');
+            this.pipesUntilBonusText.setText('BONUS ROUND!');
         }
     }
 
-    showLuckyBreakMessage(): Promise<void> {
-        this.luckyBreakMessageText.setAlpha(0).setVisible(true);
-        return new Promise(resolve => {
-            this.scene.tweens.add({
-                targets: this.luckyBreakMessageText,
-                alpha: 1,
-                duration: 700,
-                ease: 'Power2',
-                onComplete: () => resolve()
-            });
-        });
-    }
-
-    hideLuckyBreakMessage(): Promise<void> {
-        if (!this.luckyBreakMessageText.visible) return Promise.resolve();
-        return new Promise(resolve => {
-            this.scene.tweens.add({
-                targets: this.luckyBreakMessageText,
-                alpha: 0,
-                duration: 700,
-                ease: 'Power2',
-                onComplete: () => {
-                    this.luckyBreakMessageText.setVisible(false);
-                    resolve();
-                }
-            });
-        });
-    }
-    
     updateBonusCountdown(seconds: number): void {
         if (this.bonusCountdownText.active) {
             this.bonusCountdownText.setText(`Bonus Time: ${seconds.toFixed(0)}s`).setVisible(true);
@@ -232,7 +192,6 @@ export class UIManager {
         this.gameOverContainer?.destroy(); 
         this.pauseContainer?.destroy();
         this.pipesUntilBonusText?.destroy();
-        this.luckyBreakMessageText?.destroy();
         this.bonusCountdownText?.destroy();
     }
 }
