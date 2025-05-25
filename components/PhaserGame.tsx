@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import * as Tone from 'tone';
@@ -50,10 +49,7 @@ class GameScene extends Phaser.Scene {
     }
 
     preload(): void {
-        const birdGraphics = this.make.graphics({ fillStyle: { color: 0xffdd00 } }, false);
-        birdGraphics.fillRect(0, 0, 34, 24);
-        birdGraphics.generateTexture('birdTexture', 34, 24);
-        birdGraphics.destroy();
+        this.load.image('shoppyBirdAsset', 'assets/shoppy.png');
 
         const pipeWidth = PIPE_CONSTANTS.PIPE_WIDTH;
         const pipeTextureHeight = GAME_CONSTANTS.GAME_HEIGHT; 
@@ -146,7 +142,7 @@ class GameScene extends Phaser.Scene {
         this.uiManager = new UIManager(this, GAME_CONSTANTS.GAME_WIDTH, GAME_CONSTANTS.GAME_HEIGHT);
         this.uiManager.create(this.highScore); 
 
-        this.bird = this.physics.add.sprite(BIRD_CONSTANTS.BIRD_START_X, BIRD_CONSTANTS.BIRD_START_Y, 'birdTexture') as GameScene['bird'];
+        this.bird = this.physics.add.sprite(BIRD_CONSTANTS.BIRD_START_X, BIRD_CONSTANTS.BIRD_START_Y, 'shoppyBirdAsset') as GameScene['bird'];
         this.bird.body.setCollideWorldBounds(true);
         (this.bird.body as Phaser.Physics.Arcade.Body).onWorldBounds = true;
         this.bird.body.setGravityY(BIRD_CONSTANTS.BIRD_GRAVITY);
