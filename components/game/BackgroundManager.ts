@@ -1,4 +1,3 @@
-
 import Phaser from 'phaser';
 import { GAME_CONSTANTS, BACKGROUND_CONSTANTS as BG_CONST, BONUS_CONSTANTS } from './GameConstants';
 
@@ -218,10 +217,8 @@ export class BackgroundManager {
     }
 
     update(delta: number, _pipeSpeed: number, gameTime: number): void {
-        // Only update day/night if rainbow is not visible (or handle transition differently)
-        if (!this.rainbowGraphics || !this.rainbowGraphics.visible) {
-            this.updateDayNightCycle(delta, gameTime);
-        }
+        // Always update day/night cycle, regardless of rainbow visibility
+        this.updateDayNightCycle(delta, gameTime);
     }
 
     updateScrollingBackgrounds(delta: number, pipeSpeed: number): void {
