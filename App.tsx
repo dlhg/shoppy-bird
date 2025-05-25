@@ -21,7 +21,7 @@ function App() {
           className="text-sm sm:text-base"
           style={{ fontFamily: "'Press Start 2P', cursive" }}
         >
-          Click or Tap the screen to make the bird flap.
+          Click or Tap the screen to make Shoppy flap.
         </p>
         <p 
           className="text-sm sm:text-base"
