@@ -102,7 +102,7 @@ export class SoundManager {
         const note = itemDefinition.soundNote;
         const duration = itemKey === 'DIAMOND' ? SC.COLLECT_SOUND_DURATION_DIAMOND : SC.COLLECT_SOUND_DURATION_COIN;
         
-        this.collectSoundSynth.triggerAttackRelease(note, duration, Tone.now());
+        this.collectSoundSynth.triggerAttackRelease(note, duration, Tone.now() + 0.001);
     }
 
     dispose(): void {

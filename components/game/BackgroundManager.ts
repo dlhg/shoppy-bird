@@ -20,6 +20,8 @@ export class BackgroundManager {
     // Bonus Phase Elements
     private rainbowGraphics: Phaser.GameObjects.Graphics | undefined;
 
+    // Shooting Star Timer
+    private nextShootingStarTime: number = 0;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -40,6 +42,13 @@ export class BackgroundManager {
         starGraphics.fillRect(0,0,2,2);
         starGraphics.generateTexture('starTexture', 2,2);
         starGraphics.destroy();
+
+        // Shooting Star Texture (simple streak)
+        const shootingStarGraphics = make.graphics();
+        shootingStarGraphics.fillStyle(0xffffff, 0.9);
+        shootingStarGraphics.fillRect(0, 0, 15, 2); // Small, short streak
+        shootingStarGraphics.generateTexture('shootingStarTexture', 15, 2);
+        shootingStarGraphics.destroy();
 
         const cloudGraphics1 = make.graphics();
         cloudGraphics1.fillStyle(0xffffff, 0.9);
@@ -119,6 +128,7 @@ export class BackgroundManager {
     create(_initialHighScore: number): void { 
         const { add } = this.scene;
         this.cycleTime = 0;
+        this.nextShootingStarTime = 0; // Initialize shooting star timer
 
         this.skyRectangle = add.rectangle(0, 0, GAME_CONSTANTS.GAME_WIDTH, GAME_CONSTANTS.GAME_HEIGHT, BG_CONST.DAY_COLOR.color)
             .setOrigin(0, 0)
@@ -290,6 +300,12 @@ export class BackgroundManager {
             this.moon.x = Phaser.Math.Linear(-this.moon.width/2, GAME_CONSTANTS.GAME_WIDTH + this.moon.width/2, nightProgress);
             this.moon.y = sunPathYBase - (Math.sin(nightProgress * Math.PI) * sunPathAmplitude);
             
+            // Spawn shooting stars during night
+            if (gameTime > this.nextShootingStarTime) {
+                this.spawnShootingStar();
+                this.nextShootingStarTime = gameTime + Phaser.Math.Between(2000, 7000); // Next one in 2-7 seconds
+            }
+
             const thirdOfNight = 1/3;
             if (nightProgress < thirdOfNight) { 
                 const t = nightProgress / thirdOfNight;
@@ -319,6 +335,53 @@ export class BackgroundManager {
             });
         }
         this.skyRectangle.fillColor = skyColor.color;
+    }
+
+    private spawnShootingStar(): void {
+        const startX = Phaser.Math.Between(0, GAME_CONSTANTS.GAME_WIDTH);
+        const startY = Phaser.Math.Between(-10, GAME_CONSTANTS.GAME_HEIGHT * 0.2); // Start near top, can be on screen
+
+        const shootingStar = this.scene.add.sprite(startX, startY, 'shootingStarTexture')
+            .setOrigin(0.5, 0.5)
+            .setDepth(-7) // Above far stars/sky, below near clouds/moon maybe
+            .setAlpha(0); // Start invisible, fade in
+
+        // Random angle for downward movement
+        // Angle: 90 is straight down. Add/subtract for diagonal.
+        // Let's aim for 90 +/- 30 degrees (i.e., 60 to 120 degrees)
+        const travelAngleDeg = Phaser.Math.Between(75, 105); // Mostly downward, slight left/right
+        shootingStar.setAngle(travelAngleDeg - 90); // Sprite angle if texture is horizontal
+
+        const speed = Phaser.Math.Between(200, 400); // pixels per second
+        const distanceToTravel = GAME_CONSTANTS.GAME_HEIGHT * 1.2; // Ensure it goes well off screen
+        
+        const duration = (distanceToTravel / speed) * 1000; // Duration in ms
+
+        const endX = startX + Math.cos(Phaser.Math.DegToRad(travelAngleDeg)) * distanceToTravel;
+        const endY = startY + Math.sin(Phaser.Math.DegToRad(travelAngleDeg)) * distanceToTravel;
+
+        this.scene.tweens.add({
+            targets: shootingStar,
+            x: endX,
+            y: endY,
+            alpha: { from: 0.9, to: 0, start: 0.2, end: 1}, // Fade in quickly, then fade out over life
+            duration: duration,
+            ease: 'Power1',
+            onStart: () => {
+                shootingStar.setAlpha(0.1); // Start slightly visible
+            },
+            onUpdate: (tween, target) => {
+                // Quick fade in at the start of its life, then fade out
+                if (tween.progress < 0.1) {
+                    target.alpha = tween.progress * 9; // Ramp up to 0.9 alpha in first 10% of life
+                } else {
+                    target.alpha = 0.9 * (1 - (tween.progress - 0.1) / 0.9); // Fade out over remaining 90%
+                }
+            },
+            onComplete: () => {
+                shootingStar.destroy();
+            }
+        });
     }
 
     // --- Bonus Phase Background Methods ---
