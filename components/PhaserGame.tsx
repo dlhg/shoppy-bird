@@ -49,7 +49,7 @@ class GameScene extends Phaser.Scene {
     }
 
     preload(): void {
-        this.load.image('shoppyBirdAsset', 'assets/shoppy.png');
+        this.load.image('shoppyBirdAsset', 'assets/shoppy_sprite.png');
 
         const pipeWidth = PIPE_CONSTANTS.PIPE_WIDTH;
         const pipeTextureHeight = GAME_CONSTANTS.GAME_HEIGHT; 

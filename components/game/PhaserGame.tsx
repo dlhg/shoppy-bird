@@ -51,19 +51,19 @@ class GameScene extends Phaser.Scene {
     }
 
     preload(): void {
-        // Load the shoppy.png image for the bird using a new key
+        // Load the shoppy_sprite.png image for the bird using a new key
         const birdAssetKey = 'shoppyBirdAssetActual';
-        this.load.image(birdAssetKey, 'assets/shoppy.png');
-        console.log(`Phaser Preload: Attempting to load 'assets/shoppy.png' as '${birdAssetKey}'`);
+        this.load.image(birdAssetKey, 'assets/shoppy_sprite.png');
+        console.log(`Phaser Preload: Attempting to load 'assets/shoppy_sprite.png' as '${birdAssetKey}'`);
 
         this.load.once(Phaser.Loader.Events.FILE_LOAD_ERROR, (fileObj: Phaser.Loader.File) => {
             if (fileObj.key === birdAssetKey) {
-                console.error(`Phaser Loader Error: Failed to load ${birdAssetKey} (assets/shoppy.png)! Check path/integrity. URL: ${fileObj.url}`, fileObj);
+                console.error(`Phaser Loader Error: Failed to load ${birdAssetKey} (assets/shoppy_sprite.png)! Check path/integrity. URL: ${fileObj.url}`, fileObj);
             }
         });
         this.load.on(Phaser.Loader.Events.FILE_COMPLETE, (key: string, type: string, _fileData: Phaser.Loader.File) => {
             if (key === birdAssetKey) {
-                console.log(`Phaser Loader: ${birdAssetKey} (assets/shoppy.png) load attempt complete.`);
+                console.log(`Phaser Loader: ${birdAssetKey} (assets/shoppy_sprite.png) load attempt complete.`);
                 if (this.textures.exists(birdAssetKey)) {
                     const texture = this.textures.get(birdAssetKey);
                     console.log(`Phaser Loader: Texture ${birdAssetKey} exists in manager. Key: ${texture.key}, Width: ${texture.width}, Height: ${texture.height}, Source: ${texture.source[0]?.source?.src}`);
@@ -183,7 +183,7 @@ class GameScene extends Phaser.Scene {
                  console.log(`Diagnostic Create: '${birdAssetKey}' seems valid and will be used for the bird.`);
             }
         } else {
-            console.error(`Diagnostic Create: Texture '${birdAssetKey}' NOT FOUND in texture manager. This means 'assets/shoppy.png' failed to load. Applying BLUE fallback.`);
+            console.error(`Diagnostic Create: Texture '${birdAssetKey}' NOT FOUND in texture manager. This means 'assets/shoppy_sprite.png' failed to load. Applying BLUE fallback.`);
             useFallback = true;
         }
 
