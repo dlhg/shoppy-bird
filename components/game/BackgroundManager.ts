@@ -127,7 +127,7 @@ export class BackgroundManager {
 
     create(_initialHighScore: number): void { 
         const { add } = this.scene;
-        this.cycleTime = 0;
+        this.cycleTime = BG_CONST.DAY_DURATION; // Start at the beginning of the night cycle
         this.nextShootingStarTime = 0; // Initialize shooting star timer
 
         this.skyRectangle = add.rectangle(0, 0, GAME_CONSTANTS.GAME_WIDTH, GAME_CONSTANTS.GAME_HEIGHT, BG_CONST.DAY_COLOR.color)
