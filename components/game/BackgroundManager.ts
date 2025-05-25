@@ -113,6 +113,22 @@ export class BackgroundManager {
         treeGraphics.generateTexture('treeTexture', 40, 90);
         treeGraphics.destroy();
 
+        // New Triangular Tree Texture
+        const treeTriangleGraphics = make.graphics();
+        // Trunk
+        treeTriangleGraphics.fillStyle(0x5D4037); // A brown color for trunk
+        treeTriangleGraphics.fillRect(15, 60, 10, 30); // x, y, width, height (same as oval tree trunk)
+        // Foliage (Isosceles Triangle)
+        treeTriangleGraphics.fillStyle(0x1E5631); // Changed to a darker ForestGreen
+        treeTriangleGraphics.beginPath();
+        treeTriangleGraphics.moveTo(20, 0);    // Top point of triangle (centered over trunk)
+        treeTriangleGraphics.lineTo(0, 60);   // Bottom-left point
+        treeTriangleGraphics.lineTo(40, 60);  // Bottom-right point
+        treeTriangleGraphics.closePath();
+        treeTriangleGraphics.fillPath();
+        treeTriangleGraphics.generateTexture('treeTextureTriangle', 40, 90); // Same dimensions as oval tree
+        treeTriangleGraphics.destroy();
+
         const groundGenGraphics = make.graphics();
         groundGenGraphics.fillStyle(0x556B2F); 
         groundGenGraphics.fillRect(0, 0, GAME_CONSTANTS.GAME_WIDTH, this.groundVisualHeight);
@@ -201,9 +217,10 @@ export class BackgroundManager {
         for (let i = 0; i < 5; i++) {
             const treeX = Phaser.Math.Between(0, GAME_CONSTANTS.GAME_WIDTH) + i * GAME_CONSTANTS.GAME_WIDTH * 0.3;
             const treeY = GAME_CONSTANTS.GAME_HEIGHT - 20 - Phaser.Math.Between(0,this.groundVisualHeight * 0.3); 
-            this.treesGroup.create(treeX, treeY, 'treeTexture')
+            const treeTextureKey = Phaser.Math.RND.pick(['treeTexture', 'treeTextureTriangle']);
+            this.treesGroup.create(treeX, treeY, treeTextureKey)
                 .setOrigin(0.5, 1)
-                .setScale(Phaser.Math.FloatBetween(0.7, 1.1))
+                .setScale(Phaser.Math.FloatBetween(0.4, 0.7))
                 .setDepth(-4); 
         }
     }
