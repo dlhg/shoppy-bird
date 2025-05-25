@@ -43,12 +43,19 @@ export class BackgroundManager {
         starGraphics.generateTexture('starTexture', 2,2);
         starGraphics.destroy();
 
-        // Shooting Star Texture (simple streak)
-        const shootingStarGraphics = make.graphics();
-        shootingStarGraphics.fillStyle(0xffffff, 0.9);
-        shootingStarGraphics.fillRect(0, 0, 15, 2); // Small, short streak
-        shootingStarGraphics.generateTexture('shootingStarTexture', 15, 2);
-        shootingStarGraphics.destroy();
+        // Shooting Star Texture (old simple streak - will be replaced by head + particles)
+        const shootingStarStreakGraphics = make.graphics();
+        shootingStarStreakGraphics.fillStyle(0xffffff, 0.9);
+        shootingStarStreakGraphics.fillRect(0, 0, 15, 2); // Small, short streak
+        shootingStarStreakGraphics.generateTexture('shootingStarStreakTexture', 15, 2); // Renamed to avoid conflict
+        shootingStarStreakGraphics.destroy();
+
+        // New Shooting Star Head Texture (small circle)
+        const shootingStarHeadGraphics = make.graphics();
+        shootingStarHeadGraphics.fillStyle(0xffffff, 1); // Bright white
+        shootingStarHeadGraphics.fillCircle(3, 3, 3); // 6x6 texture, 3px radius circle
+        shootingStarHeadGraphics.generateTexture('shootingStarHeadTexture', 6, 6);
+        shootingStarHeadGraphics.destroy();
 
         const cloudGraphics1 = make.graphics();
         cloudGraphics1.fillStyle(0xffffff, 0.9);
@@ -303,7 +310,7 @@ export class BackgroundManager {
             // Spawn shooting stars during night
             if (gameTime > this.nextShootingStarTime) {
                 this.spawnShootingStar();
-                this.nextShootingStarTime = gameTime + Phaser.Math.Between(2000, 7000); // Next one in 2-7 seconds
+                this.nextShootingStarTime = gameTime + Phaser.Math.Between(10000, 20000); // Next one in 10-20 seconds
             }
 
             const thirdOfNight = 1/3;
@@ -338,70 +345,89 @@ export class BackgroundManager {
     }
 
     private spawnShootingStar(): void {
-        const textureAssetKey = 'shootingStarTexture';
-        // The base texture is 15x2, effectively a horizontal line.
-        const baseTextureWidth = 15;
+        const headTextureAssetKey = 'shootingStarHeadTexture';
+        // For tail particles, we can use the small star texture or create an even smaller one.
+        // Let's use a slightly smaller version of the head for a denser, brighter start to the tail.
+        const tailParticleTextureAssetKey = 'shootingStarHeadTexture'; 
 
-        const scale = Phaser.Math.FloatBetween(0.7, 1.5); // Varied size (length and thickness)
-        const effectiveWidth = baseTextureWidth * scale;
+        const headScale = Phaser.Math.FloatBetween(0.8, 1.3); // Size of the leading "head" circle
 
         const isGoingRight = Phaser.Math.RND.pick([true, false]);
+        const headEffectiveSize = 6 * headScale; // Approx. diameter of the head
 
-        // Start and end well off-screen for a full traverse
-        const startX = isGoingRight ? -effectiveWidth * 2 : GAME_CONSTANTS.GAME_WIDTH + effectiveWidth * 2;
-        const endX = isGoingRight ? GAME_CONSTANTS.GAME_WIDTH + effectiveWidth * 2 : -effectiveWidth * 2;
+        const startX = isGoingRight ? -headEffectiveSize * 2 : GAME_CONSTANTS.GAME_WIDTH + headEffectiveSize * 2;
+        const endX = isGoingRight ? GAME_CONSTANTS.GAME_WIDTH + headEffectiveSize * 2 : -headEffectiveSize * 2;
         
-        // Y position will be the center of the vertical arc, higher in the sky
-        const arcCenterY = Phaser.Math.Between(GAME_CONSTANTS.GAME_HEIGHT * 0.05, GAME_CONSTANTS.GAME_HEIGHT * 0.4);
-        // curveAmplitude determines how much the star deviates vertically from arcCenterY
-        const curveAmplitude = Phaser.Math.Between(20, 70); 
+        const arcCenterY = Phaser.Math.Between(GAME_CONSTANTS.GAME_HEIGHT * 0.05, GAME_CONSTANTS.GAME_HEIGHT * 0.35); // Keep them higher
+        const curveAmplitude = Phaser.Math.Between(40, 100); // Increased for more noticeable curve
+        const curveDirection = Phaser.Math.RND.pick([-1, 1]); // -1 for curve up, 1 for curve down
 
-        const shootingStar = this.scene.add.sprite(startX, arcCenterY, textureAssetKey)
+        const shootingStarHead = this.scene.add.sprite(startX, arcCenterY, headTextureAssetKey)
             .setOrigin(0.5, 0.5)
-            .setDepth(-7) // Ensure it's a background element
-            .setAlpha(0)   // Start fully transparent
-            .setScale(scale);
+            .setDepth(-6) // Head is slightly above its tail
+            .setAlpha(0) // Start fully transparent
+            .setScale(headScale);
 
-        // Duration determines trajectory length on screen / speed
-        const duration = Phaser.Math.Between(2000, 5500); // milliseconds
+        const duration = Phaser.Math.Between(1500, 4000); // ms for travel
+        const headTargetMaxAlpha = Phaser.Math.FloatBetween(0.7, 1.0); // Target alpha after fade-in
+        const headFadeInDuration = duration * 0.15; // Duration of fade-in
+        const headVisibleDuration = duration * 0.55; // Duration head stays at headTargetMaxAlpha
+        const headFadeOutDuration = duration * 0.30; // Duration of fade-out
 
-        const targetMaxAlpha = Phaser.Math.FloatBetween(0.6, 1.0); // Max visibility
-        const fadeInDuration = duration * 0.15;  // Time to reach maxAlpha
-        const fadeOutStartTime = duration * 0.5; // When to begin fading out
-        const fadeOutDuration = duration - fadeOutStartTime; // Time to fade from maxAlpha to 0
+        // --- Particle Emitter for the Tail ---
+        const tailEmitter = this.scene.add.particles(0, 0, tailParticleTextureAssetKey, {
+            follow: shootingStarHead, // Emitter follows the head
+            speed: { min: 10, max: 30 }, // Particles have a little speed away from the head, in their emitted direction
+            angle: { min: isGoingRight ? 150 : -30, max: isGoingRight ? 210 : 30 }, // Emit backwards relative to head direction
+            scale: { start: headScale * 0.7, end: 0.05, ease: 'Power2' }, // Particles shrink to nothing
+            alpha: { start: 0.7, end: 0, ease: 'Power2' }, // Particles fade out
+            lifespan: { min: 200, max: 600 }, // How long each particle lives
+            frequency: 25, // How often to emit a particle (ms). Lower is more particles.
+            quantity: 1, // Number of particles per emission
+            blendMode: 'ADD', // For a brighter, glowing effect
+        });
+        tailEmitter.setDepth(-7); // Set depth on the emitter manager itself
 
+        // --- Tweens for the Head ---
+
+        // Position Tween (main movement)
         this.scene.tweens.add({
-            targets: shootingStar,
-            x: endX, // Main property being tweened linearly for horizontal movement
+            targets: shootingStarHead,
+            x: endX,
             duration: duration,
-            ease: 'Linear', 
-            
+            ease: 'Linear',
             onUpdate: (tweenInstance) => {
-                const progress = tweenInstance.progress; // Overall progress of X movement (0 to 1)
-                const currentTime = tweenInstance.elapsed; // Elapsed time of this tween in ms
-
-                // Y-position for a gentle curve:
-                // Math.sin(progress * Math.PI) creates a 0 -> 1 -> 0 arc shape over the duration
-                shootingStar.y = arcCenterY + curveAmplitude * Math.sin(progress * Math.PI);
-
-                // Alpha management for fade in and fade out:
-                if (currentTime < fadeInDuration) {
-                    // Fading in
-                    shootingStar.alpha = targetMaxAlpha * (currentTime / fadeInDuration);
-                } else if (currentTime >= fadeOutStartTime) {
-                    // Fading out
-                    const timeIntoFadeOut = currentTime - fadeOutStartTime;
-                    shootingStar.alpha = targetMaxAlpha * (1 - (timeIntoFadeOut / fadeOutDuration));
-                } else {
-                    // Fully visible period (between fade in and fade out start)
-                    shootingStar.alpha = targetMaxAlpha;
-                }
-                // Ensure alpha stays within [0, targetMaxAlpha]
-                shootingStar.alpha = Math.max(0, Math.min(shootingStar.alpha, targetMaxAlpha)); 
+                const progress = tweenInstance.progress;
+                shootingStarHead.y = arcCenterY + (curveDirection * curveAmplitude * progress * progress);
             },
-            
             onComplete: () => {
-                shootingStar.destroy(); // Clean up the sprite when the tween finishes
+                tailEmitter.stop();
+                // Head will be destroyed by its own alpha tween's onComplete if it exists, or here as a fallback
+                if (shootingStarHead.active) shootingStarHead.destroy(); 
+                this.scene.time.delayedCall(1000, () => {
+                    if (tailEmitter.active) tailEmitter.destroy();
+                });
+            }
+        });
+
+        // Alpha Fade-In Tween for Head
+        this.scene.tweens.add({
+            targets: shootingStarHead,
+            alpha: headTargetMaxAlpha,
+            duration: headFadeInDuration,
+            ease: 'Linear'
+        });
+
+        // Alpha Fade-Out Tween for Head
+        this.scene.tweens.add({
+            targets: shootingStarHead,
+            alpha: 0,
+            duration: headFadeOutDuration,
+            ease: 'Linear',
+            delay: headFadeInDuration + headVisibleDuration, // Start fade-out after fade-in and visible duration
+            onComplete: () => {
+                // Ensure head is destroyed if it hasn't been already
+                if (shootingStarHead.active) shootingStarHead.destroy();
             }
         });
     }
