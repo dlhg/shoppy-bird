@@ -338,48 +338,70 @@ export class BackgroundManager {
     }
 
     private spawnShootingStar(): void {
-        const startX = Phaser.Math.Between(0, GAME_CONSTANTS.GAME_WIDTH);
-        const startY = Phaser.Math.Between(-10, GAME_CONSTANTS.GAME_HEIGHT * 0.2); // Start near top, can be on screen
+        const textureAssetKey = 'shootingStarTexture';
+        // The base texture is 15x2, effectively a horizontal line.
+        const baseTextureWidth = 15;
 
-        const shootingStar = this.scene.add.sprite(startX, startY, 'shootingStarTexture')
-            .setOrigin(0.5, 0.5)
-            .setDepth(-7) // Above far stars/sky, below near clouds/moon maybe
-            .setAlpha(0); // Start invisible, fade in
+        const scale = Phaser.Math.FloatBetween(0.7, 1.5); // Varied size (length and thickness)
+        const effectiveWidth = baseTextureWidth * scale;
 
-        // Random angle for downward movement
-        // Angle: 90 is straight down. Add/subtract for diagonal.
-        // Let's aim for 90 +/- 30 degrees (i.e., 60 to 120 degrees)
-        const travelAngleDeg = Phaser.Math.Between(75, 105); // Mostly downward, slight left/right
-        shootingStar.setAngle(travelAngleDeg - 90); // Sprite angle if texture is horizontal
+        const isGoingRight = Phaser.Math.RND.pick([true, false]);
 
-        const speed = Phaser.Math.Between(200, 400); // pixels per second
-        const distanceToTravel = GAME_CONSTANTS.GAME_HEIGHT * 1.2; // Ensure it goes well off screen
+        // Start and end well off-screen for a full traverse
+        const startX = isGoingRight ? -effectiveWidth * 2 : GAME_CONSTANTS.GAME_WIDTH + effectiveWidth * 2;
+        const endX = isGoingRight ? GAME_CONSTANTS.GAME_WIDTH + effectiveWidth * 2 : -effectiveWidth * 2;
         
-        const duration = (distanceToTravel / speed) * 1000; // Duration in ms
+        // Y position will be the center of the vertical arc, higher in the sky
+        const arcCenterY = Phaser.Math.Between(GAME_CONSTANTS.GAME_HEIGHT * 0.05, GAME_CONSTANTS.GAME_HEIGHT * 0.4);
+        // curveAmplitude determines how much the star deviates vertically from arcCenterY
+        const curveAmplitude = Phaser.Math.Between(20, 70); 
 
-        const endX = startX + Math.cos(Phaser.Math.DegToRad(travelAngleDeg)) * distanceToTravel;
-        const endY = startY + Math.sin(Phaser.Math.DegToRad(travelAngleDeg)) * distanceToTravel;
+        const shootingStar = this.scene.add.sprite(startX, arcCenterY, textureAssetKey)
+            .setOrigin(0.5, 0.5)
+            .setDepth(-7) // Ensure it's a background element
+            .setAlpha(0)   // Start fully transparent
+            .setScale(scale);
+
+        // Duration determines trajectory length on screen / speed
+        const duration = Phaser.Math.Between(2000, 5500); // milliseconds
+
+        const targetMaxAlpha = Phaser.Math.FloatBetween(0.6, 1.0); // Max visibility
+        const fadeInDuration = duration * 0.15;  // Time to reach maxAlpha
+        const fadeOutStartTime = duration * 0.5; // When to begin fading out
+        const fadeOutDuration = duration - fadeOutStartTime; // Time to fade from maxAlpha to 0
 
         this.scene.tweens.add({
             targets: shootingStar,
-            x: endX,
-            y: endY,
-            alpha: { from: 0.9, to: 0, start: 0.2, end: 1}, // Fade in quickly, then fade out over life
+            x: endX, // Main property being tweened linearly for horizontal movement
             duration: duration,
-            ease: 'Power1',
-            onStart: () => {
-                shootingStar.setAlpha(0.1); // Start slightly visible
-            },
-            onUpdate: (tween, target) => {
-                // Quick fade in at the start of its life, then fade out
-                if (tween.progress < 0.1) {
-                    target.alpha = tween.progress * 9; // Ramp up to 0.9 alpha in first 10% of life
+            ease: 'Linear', 
+            
+            onUpdate: (tweenInstance) => {
+                const progress = tweenInstance.progress; // Overall progress of X movement (0 to 1)
+                const currentTime = tweenInstance.elapsed; // Elapsed time of this tween in ms
+
+                // Y-position for a gentle curve:
+                // Math.sin(progress * Math.PI) creates a 0 -> 1 -> 0 arc shape over the duration
+                shootingStar.y = arcCenterY + curveAmplitude * Math.sin(progress * Math.PI);
+
+                // Alpha management for fade in and fade out:
+                if (currentTime < fadeInDuration) {
+                    // Fading in
+                    shootingStar.alpha = targetMaxAlpha * (currentTime / fadeInDuration);
+                } else if (currentTime >= fadeOutStartTime) {
+                    // Fading out
+                    const timeIntoFadeOut = currentTime - fadeOutStartTime;
+                    shootingStar.alpha = targetMaxAlpha * (1 - (timeIntoFadeOut / fadeOutDuration));
                 } else {
-                    target.alpha = 0.9 * (1 - (tween.progress - 0.1) / 0.9); // Fade out over remaining 90%
+                    // Fully visible period (between fade in and fade out start)
+                    shootingStar.alpha = targetMaxAlpha;
                 }
+                // Ensure alpha stays within [0, targetMaxAlpha]
+                shootingStar.alpha = Math.max(0, Math.min(shootingStar.alpha, targetMaxAlpha)); 
             },
+            
             onComplete: () => {
-                shootingStar.destroy();
+                shootingStar.destroy(); // Clean up the sprite when the tween finishes
             }
         });
     }
