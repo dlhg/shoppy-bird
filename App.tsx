@@ -32,6 +32,12 @@ function App() {
           className="text-sm sm:text-base"
           style={{ fontFamily: "'Press Start 2P', cursive" }}
         >
+          Press P to pause
+        </p>
+        <p 
+          className="text-sm sm:text-base"
+          style={{ fontFamily: "'Press Start 2P', cursive" }}
+        >
           Avoid the pipes!
         </p>
       </footer>
