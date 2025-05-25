@@ -46,6 +46,7 @@ class GameScene extends Phaser.Scene {
     private bonusItemSpawnTimer: Phaser.Time.TimerEvent | undefined;
     private bonusItemsGroup!: Phaser.Physics.Arcade.Group;
 
+    private bonusRoundsCompleted: number = 0;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -428,16 +429,37 @@ class GameScene extends Phaser.Scene {
 
     // --- Bonus Phase Logic ---
     async startBonusPhase(): Promise<void> {
+        if (this.isBonusPhaseActive || this.isGameOver || this.isPaused) return;
         this.isBonusPhaseActive = true;
-        this.uiManager.showBonusActiveStatus();
 
+        // Stop regular pipe spawning
         if (this.pipeSpawnTimer) {
-            this.pipeSpawnTimer.paused = true;
+            this.pipeSpawnTimer.remove(false);
+            this.pipeSpawnTimer = undefined;
         }
-        
-        this.bonusItemsGroup.clear(true, true); // Clear any previous bonus items
+        // Clear existing pipes, score zones, and collectible items
+        this.pipes.clear(true, true);
+        this.scoreZones.clear(true, true);
+        this.collectibleItems.getChildren().forEach(item => {
+            const tween = this.itemTweens.get(item as Phaser.GameObjects.Sprite);
+            if (tween) {
+                tween.stop();
+                this.itemTweens.delete(item as Phaser.GameObjects.Sprite);
+            }
+            item.destroy();
+        });
+        this.collectibleItems.clear(true, true); // Ensure group is also cleared
+
+        this.uiManager.updatePipesUntilBonus(0,0, true); // Indicate bonus is active
+
+        // Calculate dynamic spawn interval based on completed bonus rounds
+        const baseInterval = BONUS_CONSTANTS.BONUS_ITEM_SPAWN_INTERVAL;
+        // Reduce interval by 5% per completed round, cap at 50ms minimum
+        const reductionFactor = Math.pow(0.95, this.bonusRoundsCompleted);
+        const dynamicSpawnInterval = Math.max(50, baseInterval * reductionFactor);
+
         this.bonusItemSpawnTimer = this.time.addEvent({
-            delay: BONUS_CONSTANTS.BONUS_ITEM_SPAWN_INTERVAL,
+            delay: dynamicSpawnInterval, 
             callback: this.spawnSingleBonusItem,
             callbackScope: this,
             loop: true
@@ -479,12 +501,14 @@ class GameScene extends Phaser.Scene {
     }
 
     async endBonusPhase(): Promise<void> {
-        if (!this.isBonusPhaseActive) return; 
-
+        if (!this.isBonusPhaseActive) return;
         this.isBonusPhaseActive = false;
-        
-        if (this.bonusPhaseTimer) this.bonusPhaseTimer.remove(false); 
-        this.bonusPhaseTimer = undefined;
+        this.bonusRoundsCompleted++; // Increment completed bonus rounds
+
+        if (this.bonusPhaseTimer) {
+            this.bonusPhaseTimer.remove(false); 
+            this.bonusPhaseTimer = undefined;
+        }
         
         if (this.bonusItemSpawnTimer) this.bonusItemSpawnTimer.remove(false);
         this.bonusItemSpawnTimer = undefined;
