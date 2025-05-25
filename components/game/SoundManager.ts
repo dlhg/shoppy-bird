@@ -54,7 +54,7 @@ export class SoundManager {
             const randomDepth = 40 + Math.random() * 60; 
             this.jumpSoundLFO.min = -randomDepth / 2;
             this.jumpSoundLFO.max = randomDepth / 2;
-            this.jumpSoundSynth.triggerAttackRelease("G3", "16n", Tone.now()); 
+            this.jumpSoundSynth.triggerAttackRelease("G3", "16n", Tone.now() + 0.001); 
         }
     }
 
