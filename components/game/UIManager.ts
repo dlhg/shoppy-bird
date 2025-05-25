@@ -41,14 +41,14 @@ export class UIManager {
 
         this.gameInstructionsText = this.scene.add.text(
             centerX, 
-            this.gameHeight / 2 - 60, 
+            50, // Adjusted Y position to be near the top
             'Tap to Start!', 
             { fontSize: '28px', color: UIC.TEXT_COLOR_LIGHT, fontFamily: UIC.PRIMARY_FONT, align: 'center', stroke: UIC.TEXT_COLOR_DARK, strokeThickness: 4 }
         ).setOrigin(0.5).setDepth(100);
 
         this.highScoreText = this.scene.add.text(
             centerX,
-            this.gameHeight / 2 - 10,
+            90, // Adjusted Y position to be below "Tap to Start!"
             `High Score: ${initialHighScore}`,
             { fontSize: '20px', color: UIC.TEXT_COLOR_SCORE, fontFamily: UIC.PRIMARY_FONT, align: 'center', stroke: UIC.TEXT_COLOR_DARK, strokeThickness: 3 }
         ).setOrigin(0.5).setDepth(100);
