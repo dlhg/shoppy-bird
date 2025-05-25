@@ -7,6 +7,7 @@ export class SoundManager {
     public impactSoundSynth: Tone.NoiseSynth | null = null;
     private scoreSoundSynth: Tone.Synth | null = null;
     private collectSoundSynth: Tone.Synth | null = null;
+    private collectSoundFilter: Tone.Filter | null = null;
     
     private currentScoreBaseMidiNote: number = SC.INITIAL_SCORE_MIDI_NOTE;
 
@@ -39,7 +40,15 @@ export class SoundManager {
         this.collectSoundSynth = new Tone.Synth({
             oscillator: { type: 'square' }, // Changed for a slightly different timbre
             envelope: { attack: 0.005, decay: 0.08, sustain: 0.01, release: 0.12 }
+        });
+
+        // Initialize and connect the filter for collect sounds
+        this.collectSoundFilter = new Tone.Filter({
+            type: 'lowpass',
+            frequency: 1000, // Initial base frequency
+            Q: 1
         }).toDestination();
+        this.collectSoundSynth.connect(this.collectSoundFilter);
     }
 
     async ensureAudioContextStarted(): Promise<void> {
@@ -82,10 +91,13 @@ export class SoundManager {
     }
 
     playCollectSound(itemKey: 'BRONZE' | 'SILVER' | 'GOLD' | 'DIAMOND'): void {
-        if (!this.collectSoundSynth || Tone.context.state !== 'running') return;
+        if (!this.collectSoundSynth || !this.collectSoundFilter || Tone.context.state !== 'running') return;
 
         const itemDefinition = ITEM_CONSTANTS.TYPES.find(type => type.key === itemKey);
         if (!itemDefinition) return;
+
+        // Randomize filter cutoff slightly each time
+        this.collectSoundFilter.frequency.value = 800 + (Math.random() * 400); // Randomize between 800 Hz and 1200 Hz
 
         const note = itemDefinition.soundNote;
         const duration = itemKey === 'DIAMOND' ? SC.COLLECT_SOUND_DURATION_DIAMOND : SC.COLLECT_SOUND_DURATION_COIN;
@@ -99,12 +111,14 @@ export class SoundManager {
         this.impactSoundSynth?.dispose();
         this.scoreSoundSynth?.dispose();
         this.collectSoundSynth?.dispose();
+        this.collectSoundFilter?.dispose();
 
         this.jumpSoundSynth = null;
         this.jumpSoundLFO = null;
         this.impactSoundSynth = null;
         this.scoreSoundSynth = null;
         this.collectSoundSynth = null;
+        this.collectSoundFilter = null;
         
         this.currentScoreBaseMidiNote = SC.INITIAL_SCORE_MIDI_NOTE;
     }
