@@ -27,6 +27,7 @@ export class BackgroundManager {
     private planesToSpawnThisSegment: number = 0;
     private planesSpawnedThisSegment: number = 0;
     private nextPlaneSpawnTime: number = Number.MAX_SAFE_INTEGER;
+    private isPlaneCurrentlyVisible: boolean = false;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -377,7 +378,7 @@ export class BackgroundManager {
         }
 
         // Banner Plane Spawning Logic (runs every update, irrespective of day/night specific color changes)
-        if (this.planesSpawnedThisSegment < this.planesToSpawnThisSegment && gameTime > this.nextPlaneSpawnTime) {
+        if (!this.isPlaneCurrentlyVisible && this.planesSpawnedThisSegment < this.planesToSpawnThisSegment && gameTime > this.nextPlaneSpawnTime) {
             this.spawnBannerPlane();
             this.planesSpawnedThisSegment++;
             if (this.planesSpawnedThisSegment < this.planesToSpawnThisSegment) {
@@ -446,6 +447,8 @@ export class BackgroundManager {
             .setScale(planeScale)
             .setDepth(-5); 
 
+        this.isPlaneCurrentlyVisible = true;
+
         const duration = Phaser.Math.Between(10000, 16000); // 10-16 seconds to cross screen
 
         this.scene.tweens.add({
@@ -460,6 +463,7 @@ export class BackgroundManager {
             },
             onComplete: () => {
                 plane.destroy();
+                this.isPlaneCurrentlyVisible = false;
             }
         });
     }
