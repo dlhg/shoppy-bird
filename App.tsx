@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PhaserGame from './components/PhaserGame';
 
@@ -22,6 +21,12 @@ function App() {
           style={{ fontFamily: "'Press Start 2P', cursive" }}
         >
           Click or Tap the screen to make Shoppy flap.
+        </p>
+        <p 
+          className="text-sm sm:text-base"
+          style={{ fontFamily: "'Press Start 2P', cursive" }}
+        >
+          Collect bonus items for extra points.
         </p>
         <p 
           className="text-sm sm:text-base"
